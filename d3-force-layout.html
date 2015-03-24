@@ -1,0 +1,126 @@
+<style>.link {stroke: white; stroke-width: 1.2px;} .d3-force-layout-figure svg {display: block; margin: 0 auto;}</style>
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<script type="text/javascript">var w = 580, h = 400, backgroundColor = 'black';</script>
+
+<h1>An introduction to D3js' Force Layout</h1>
+
+<i>The code shown below comes from <a href="http://d3js.org/">the D3js website</a> and the tons of examples it provides.</i>
+
+<h2>What is the force layout?</h2>
+
+D3's layouts are methods that let you easily display complex datasets in relevant charts with little effort.
+You can learn more about all of D3's layouts <a href="https://github.com/mbostock/d3/wiki/Layouts">in the library's documenation</a>.
+The force layout, like all other layouts, provides us with tools that let us arrange our data on a chart. But it does so using physical simulation.
+How is physical simulation relevant in dataviz?
+Take the messy chart below. All its points are randomly positioned inside the black container. But if you click on that mess...
+
+<div id="d3-force-layout-graph" class="d3-force-layout-figure"></div>
+<script type="text/javascript" src="//jrbeaudoin.github.io/d3-force-layout-examples/complete-graph.js"></script>
+... it triggers a physical simulation that gives sense to the previous mess, gently revealing the relations between all our datapoints.
+Noone had to set up the points' positions. They just figured out where to go by themselves.
+
+<h2>Inserting points</h2>
+
+Now you understand why D3's force layout can be useful. Let's take some time to understand how it works. I will will walk you through a few examples showing what the force layout is made of and why it serves our purpose of displaying complex graphs.
+But, <i>what's a graph?</i>
+A graph, in mathematics, is <i>a set of vertices connected by edges</i>. So, let's generate a few vertices inside our container.
+In order to make the following examples interactive, we will add these points by moving our cursor over the workspace instead of, say, loading them from a file (like in the first example above).
+
+<div id="d3-force-layout-points" class="d3-force-layout-figure"></div>
+<script type="text/javascript" src="//jrbeaudoin.github.io/d3-force-layout-examples/display-points.js"></script>
+
+<h2>There shall be movement</h2>
+
+We would like to give these points some movement. We will give each point an impulsion based on our cursor's current and previous positions. To do so, we set each nodes' <code>px</code> and <code>py</code> properties with the variation of our cursor's x and y coordinates.
+Based on these properties, the force layout will handle the animation of all the points.
+
+<div id="d3-force-layout-velocity" class="d3-force-layout-figure"></div>
+<script type="text/javascript" src="//jrbeaudoin.github.io/d3-force-layout-examples/velocity.js"></script>
+
+Obeying Newton's first law, our point float towards infinity...
+So let's set up a little friction to prevent them from going too far.
+
+<div id="d3-force-layout-friction" class="d3-force-layout-figure"></div>
+<script type="text/javascript" src="//jrbeaudoin.github.io/d3-force-layout-examples/friction.js"></script>
+
+D3 actually sets the <code>friction</code> parameter to <code>0.9</code> by default. So setting it yourself is not mandatory.
+
+Our scene is getting messy. There is no interaction between the points so they are overlapping each another. We can fix that by setting a repulsive force that will keep points apart. We do so by using the force layout's <code>charge</code> parameter and setting it to a negative value.
+
+<div id="d3-force-layout-repulsion" class="d3-force-layout-figure"></div>
+<script type="text/javascript" src="//jrbeaudoin.github.io/d3-force-layout-examples/repulsion.js"></script>
+
+Once again, D3 sets the <code>charge</code> parameter to <code>-30</code> by default.
+
+Now, our points keep pushing each other far outside our small SVG container. We can prevent this by using another handy tool: the <code>gravity</code> parameter. It simulates a force that attracts all the points towards the center of the container.
+
+<div id="d3-force-layout-gravity" class="d3-force-layout-figure"></div>
+<script type="text/javascript" src="//jrbeaudoin.github.io/d3-force-layout-examples/gravity.js"></script>
+
+I don't think Mike Bostock has implemented gravity into D3's force layout for the beauty of science. It allows us to keep our data points floating towards the center of our document instead of spreading randomly. That's pretty handy!
+<code>Gravity</code> defaults to <code>0.1</code> so you don't necessarily have to set it yourself.
+
+<h2>In the loop</h2>
+
+Ok, now that we have grasped the basics of the force layout, I would like to take a step back and give you a hint of how this works.
+The force layout runs a simulation that changes the positions of nodes according to a few laws of physics.
+At every step, the new position of a node is computed based on its previous position and the various interactions it has with it's environment (friction, repulsion, gravity, etc.).
+You can pause and resume this simulation whenever you want.
+In the next example, the layout is stopped and started at every mouse click by using <code>force.stop()</code> and <code>force.start()</code> methods.
+
+<div id="d3-force-layout-stop-start" class="d3-force-layout-figure"></div>
+<script type="text/javascript" src="//jrbeaudoin.github.io/d3-force-layout-examples/stop-start.js"></script>
+
+This looks quite good. But our data is not yet very interesting. There actually is no data at all.
+Let's add two random properties to each of our nodes: size and value. We will visualize these properties respectively as size and color.
+
+<div id="d3-force-layout-size-color" class="d3-force-layout-figure"></div>
+<script type="text/javascript" src="//jrbeaudoin.github.io/d3-force-layout-examples/size-and-color.js"></script>
+
+Nodes are overlapping again. How can we fix this? We could set each node's charge depending on it's size but the nodes would still overlap for a short time before the layout stabilises. Plus there's a cooler thing I would like to show you.
+We will add a collision detection function.
+
+<div id="d3-force-layout-collision" class="d3-force-layout-figure"></div>
+<script type="text/javascript" src="//jrbeaudoin.github.io/d3-force-layout-examples/collision.js"></script>
+
+To achieve this effect, we hooked into the simulation loop, taking advantage of the <code>tick</code> event. This event is triggered at every step of the simulation and allows you to take control of everything that's happening in the force layout.
+<pre><code>force.on('tick', function (e) {
+  var nodes = force.nodes();
+  var k = e.alpha * .1;
+  var q = d3.geom.quadtree(nodes),
+  i = 0,
+  n = nodes.length;
+  while (++i < n) q.visit(collide(nodes[i]));
+  svgContainer.selectAll('circle')
+    .attr('cx', function (d) { return d.x; })
+    .attr('cy', function (d) { return d.y; });
+});</code></pre>
+
+<h2>Adding links</h2>
+
+As I said earlier, a graph is <i>a set of vertices connected by edges</i>. We have the vertices. Let's add the edges, or links, as they are called in D3. Every time we insert a new point in the graph below, we randomly connect it to an existing point.
+
+<div id="d3-force-layout-links" class="d3-force-layout-figure"></div>
+<script type="text/javascript" src="//jrbeaudoin.github.io/d3-force-layout-examples/links.js"></script>
+
+To add a link in the simulation, you have to create an object with two straightforward properties:
+<pre><code>link = {
+  source: node,
+  target: force.nodes()[Math.floor(Math.random() * force.nodes().length)]
+}</code></pre>
+
+And then you must insert the new link into the list of links handled by the simulation:
+<pre><code>force.links().push(link);</code></pre>
+
+If you wish the new link to show up on your screen, you need to bind it to an SVG line:
+<pre><code>svgContainer.append('svg:line')
+  .data([link])
+  .attr('stroke', 'red')
+  .attr('stroke-width', 1.5);</code></pre>
+
+And finally you need to update each line's ends on every <code>tick</code>:
+<pre><code>svgContainer.selectAll('line')
+  .attr('x1', function(d) { return d.source.x; })
+  .attr('y1', function(d) { return d.source.y; })
+  .attr('x2', function(d) { return d.target.x; })
+  .attr('y2', function(d) { return d.target.y; });</code></pre>
